@@ -12,11 +12,34 @@ pcbPlateScrewDiam = 2;   // 2 = M2
 enablePCBPlateSupports = true;  // Small supports on the PCB plate
 enablePCBPlateScrewHoles = true;
 
-eurorack_module_blank(units = 2) {
+eurorack_module_blank(units = 4) {
     // Add custom holes here. Remember that the
     // rail will cover `erPanelClearance` on the
     // top and bottom.
+    
+    // make some example 6mm and 3mm holes
+    centerX = 20;
+    centerY = erHorizontalPitch*4/2;
+    translate([centerX,centerY,-0.5])
+    makeHole(6);
+    translate([centerX*2,centerY,-0.5])
+    makeHole(6);
+    translate([centerX*3,centerY,-0.5])
+    makeHole(6);
+    translate([centerX*4,centerY,-0.5])
+    makeHole(6);
+    translate([centerX*4.5,centerY,-0.5])
+    makeHole(3);
+    translate([centerX*5,centerY,-0.5])
+    makeHole(3);
+    translate([centerX*5.5,centerY,-0.5])
+    makeHole(3);
 };
+
+module makeHole(d) {
+    cylinder(h=wallThickness+1, d=d);
+}
+
 
 module eurorack_module_blank(units) {
     translate([-erHeight/2,-erHorizontalPitch*units/2,0]) {
