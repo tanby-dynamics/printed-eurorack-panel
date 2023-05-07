@@ -3,17 +3,27 @@
 // MIT license
 
 // Globals
-wallThickness = 1;
+frontPanelThickness = 2;
+pcbPlateThickness = 1.5;
 erHeight = 128.5;   // 3U
 erHorizontalPitch = 5.08;   //1/2"
 erPanelClearance = 6;   // width of the rails
-erPanelScrewDiam = 3.2;   // 1/16"
-pcbPlateScrewDiam = 2;   // 2 = M2
+erPanelScrewDiam = 3.2 + 0.5;   // 1/16" plus 0.5mm
+pcbPlateScrewDiam = 3.0;   // 3 = M3
+enablePCBPlate = true;
 enablePCBPlateSupports = true;  // Small supports on the PCB plate
 enablePCBPlateScrewHoles = true;
-labelDepth = 0.3;
+enablePCBPlateCutouts = true;   // only works with pcbPlateWidth of 80...
+pcbPlateCutoutType = 2;    // 1 = triangles, 2 = rectangle
+labelDepth = 0.6;
 
-eurorack_module_blank(units = 4) {
+erUnits = 6;
+pcbPlateWidth = 80;
+
+//comment the following rotate and translate out to print the front panel on the bed (not recommended)
+rotate([90, 0, 0])
+translate([0, erUnits*erHorizontalPitch/2, -erUnits*erHorizontalPitch/2])
+eurorack_module_blank() {
     // This is applied in a `difference` block, so
     // any geometries added here will be subtracted
     // from the front panel.
@@ -24,28 +34,28 @@ eurorack_module_blank(units = 4) {
     
     // make some example 6mm and 3mm holes
     centerX = 20;
-    centerY = erHorizontalPitch*4/2;
+    centerY = erHorizontalPitch*6/2;
 
-    makeHole(x=centerX,     y=centerY, d=3);
-    makeHole(x=centerX*2,   y=centerY, d=3);
-    makeHole(x=centerX*3,   y=centerY, d=3);
-    makeHole(x=centerX*4,   y=centerY, d=3);
-    makeHole(x=centerX*4.5, y=centerY, d=4);
-    makeHole(x=centerX*5,   y=centerY, d=4);
-    makeHole(x=centerX*5.5, y=centerY, d=4);
+    makeHole(x=centerX,     y=centerY, d=7.2);    // pot
+    makeHole(x=centerX*2.5,   y=centerY, d=6.5);  // switch
+    makeHole(x=centerX*3.5,   y=centerY, d=6.5);  // 1/8" jack
+    makeHole(x=centerX*4.4, y=centerY, d=3.6);    // 3mm led
+    makeHole(x=centerX*4.9,   y=centerY, d=3.6);  // 3mm led
     
-    makeLabel(x=1.0, y=5, size=1.5, label="TANBY DYNAMICS");
-    makeLabel(x=7.0, y=centerX+2, size=1.5, label="Label 1");
-    makeLabel(x=7.0, y=centerX*2+2, size=1.5, label="Label 2");
-    makeLabel(x=7.0, y=centerX*3+2, size=1.5, label="Label 3");
+    makeLabel(x=-1.0, y=5, size=4, label="VCO");
+    makeLabel(x=1.0, y=centerX+5, size=4, label="pot");
+    makeLabel(x=-3.0, y=centerX*2.5+2, size=4, label="switch");
+    makeLabel(x=-0.5, y=centerX*3.5+2, size=4, label="jack");
+    makeLabel(x=-2.0, y=105, size=4, label="tanby");
+    makeLabel(x=-7.5, y=110, size=4, label="dynamics");
 };
 
 module makeHole(x, y, d) {
     translate([x, y, -0.5])
-    cylinder(h=wallThickness + 1, d=d);
+    cylinder(h=frontPanelThickness + 1, d=d);
 }
 
-module makeLabel(x, y, size, label) {
+module makeLabel(x, y, size, label, font="Liberation Sans:style=Bold") {
     rotate([180, 0, 270])
     translate([
         -erHorizontalPitch*4 + x,
@@ -53,72 +63,80 @@ module makeLabel(x, y, size, label) {
         -labelDepth
     ])
     linear_extrude(1)
-    text(label, size=size);
+    text(label, size=size, font=font);
 }
 
 
-module eurorack_module_blank(units) {
-    translate([-erHeight/2,-erHorizontalPitch*units/2,0]) {
+module eurorack_module_blank() {
+    translate([-erHeight/2,-erHorizontalPitch*erUnits/2,0]) {
         difference() {
-            front_panel(units);
+            front_panel();
             children(); // children should be cylinders and other geometries that cut through the front panel
         }
-        pcb_plate(width = 30, units = units);
+        if (enablePCBPlate) {
+            pcb_plate();
+        }
     }
 }
 
-module front_panel(units) {
-    width = erHorizontalPitch*units;
+module front_panel() {
+    width = erHorizontalPitch*erUnits;
     
     difference() {
-        cube([erHeight, width, wallThickness]);
+        cube([erHeight, width, frontPanelThickness]);
         // top screw hole
         translate([erPanelClearance/2,width/2,-0.5])
-        cylinder(h=wallThickness+1, d=erPanelScrewDiam);
+        cylinder(h=frontPanelThickness+1, d=erPanelScrewDiam);
         // bottom screw hole
         translate([
             erHeight - erPanelClearance/2,
             width/2,
             -0.5
         ])
-        cylinder(h=wallThickness+1, d=erPanelScrewDiam);
+        cylinder(h=frontPanelThickness+1, d=erPanelScrewDiam);
     }
 }
 
-module pcb_plate(width, units) {
-    lengthTolerance = 1;    // trim a millimetre to clear the rails
+module pcb_plate() {
+    lengthTolerance = 2;    // trim 2mm to clear the rails
     length = erHeight-erPanelClearance*2 - lengthTolerance;
     
     rotate([90, 0, 0])
-    translate([erPanelClearance + lengthTolerance/2, wallThickness, -wallThickness])
+    translate([erPanelClearance + lengthTolerance/2, pcbPlateThickness, -pcbPlateThickness])
     difference() {
          {
              union() {
                 // The plate
-                cube([length, width+wallThickness, wallThickness]);
+                cube([length, pcbPlateWidth+pcbPlateThickness, pcbPlateThickness]);
                 
                 if (enablePCBPlateSupports) {
-                    pcb_plate_support(units);
-                    translate([length-wallThickness, 0, 0])
-                    pcb_plate_support(units);
+                    pcb_plate_support();
+                    translate([length-pcbPlateThickness, 0, 0])
+                    pcb_plate_support();
                 }
             }
         }
         
         if (enablePCBPlateScrewHoles) {
-            pcb_plate_screw_holes(width, length);
+            pcb_plate_screw_holes(pcbPlateWidth, length);
+        }
+        if (enablePCBPlateCutouts) {
+            if (pcbPlateCutoutType == 1) {
+                pcb_plate_triangle_cutouts(pcbPlateWidth, length);
+            } else if (pcbPlateCutoutType == 2) {
+                pcb_plate_rectangle_cutout(pcbPlateWidth, length);
+            }
         }
     }
-
 }
 
 // Increase widthRatio for larger supports
-module pcb_plate_support(units, widthRatio = 0.25) {
-    width = erHorizontalPitch*units*widthRatio;
+module pcb_plate_support(widthRatio = 2/5) {
+    width = erHorizontalPitch*erUnits*widthRatio;
     
-    translate([wallThickness,0,-width])
+    translate([pcbPlateThickness,0,-width])
     rotate([0,270,0])
-    linear_extrude(height=wallThickness)
+    linear_extrude(height=pcbPlateThickness)
     polygon([
         [0,0],
         [width,0],
@@ -127,19 +145,66 @@ module pcb_plate_support(units, widthRatio = 0.25) {
 }
 
 // offset is the distance in from the corner
-module pcb_plate_screw_holes(pcbWidth, pcbLength, offset = 5) {
+module pcb_plate_screw_holes(pcbWidth, pcbLength, offset = 7) {
     module hole() {
-        cylinder(h = wallThickness + 1, d = pcbPlateScrewDiam);
+        cylinder(h = pcbPlateThickness + 1, d = pcbPlateScrewDiam);
     }
-    zOffset = -wallThickness+0.5;
     
-    translate([offset, offset, zOffset])
+    panelOffset = 20;
+    zOffset = -pcbPlateThickness + 0.6;
+    
+    translate([offset, panelOffset, zOffset])
     hole();
-    translate([pcbLength-offset, offset, zOffset])
+    translate([pcbLength-offset, panelOffset, zOffset])
     hole();
     translate([offset, pcbWidth-offset, zOffset])
     hole();
     translate([pcbLength-offset, pcbWidth-offset, zOffset])
     hole();
+}
+
+module pcb_plate_triangle_cutouts(pcbWidth, pcbLength, offset = 10) {
+    cutoutLength = (pcbWidth - offset*3)/2;
     
+    module cutout() {
+        translate([0, 0, -0.5])
+        linear_extrude(height = pcbPlateThickness + 1)
+        polygon([
+            [0, 0],
+            [cutoutLength, 0],
+            [cutoutLength, cutoutLength]
+        ]);
+    }
+    
+    module cutoutPair() {
+        translate([offset*1.5, offset, 0])
+        cutout();
+        
+        translate([offset*4, offset*1.5+cutoutLength, 0])
+        rotate([0, 0, 180])
+        cutout();
+    }
+    
+    translate([0, 0, 0])
+    cutoutPair();
+    translate([offset*3, 0, 0])
+    cutoutPair();
+    translate([offset*6, 0, 0])
+    cutoutPair();
+    
+    translate([0, offset*3.5, 0])
+    cutoutPair();
+    translate([offset*3, offset*3.5, 0])
+    cutoutPair();
+    translate([offset*6, offset*3.5, 0])
+    cutoutPair();
+}
+
+module pcb_plate_rectangle_cutout(pcbWidth, pcbLength, offset = 10) {
+    translate([offset*1.5, offset*1.0, -0.5])
+    cube([
+        pcbLength - offset*3.0,
+        pcbWidth - offset*2.0,
+        pcbPlateThickness + 1
+    ]);
 }
